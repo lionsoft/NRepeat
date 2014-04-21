@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +6,7 @@ namespace NRepeat
 {
     public static class AwaitExtensionMethods
     {
+/*
         public static async Task<T> WithWaitCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
         {
             // The tasck completion source. 
@@ -22,6 +20,20 @@ namespace NRepeat
 
             // Wait for one or the other to complete.
             return await task;
+        }
+*/
+        public static Task<T> WithWaitCancellation<T>(this Task<T> task, CancellationToken cancellationToken, Action onCancel = null)
+        {
+            var cancelTask = Task.Run(() =>
+            {
+                cancellationToken.WaitHandle.WaitOne();
+                if (onCancel != null)
+                    onCancel();
+                cancellationToken.ThrowIfCancellationRequested();
+                return default(T);
+            }, cancellationToken);
+
+            return Task.WhenAny(task, cancelTask).Unwrap();
         }
     }
 }

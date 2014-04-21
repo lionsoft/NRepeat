@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,9 +15,9 @@ namespace NRepeat
         public int Buffer { get; set; }
         public bool Running { get; set; }
 
-        private static TcpListener listener;
+        private static TcpListener _listener;
 
-        private CancellationTokenSource cancellationTokenSource;
+        private CancellationTokenSource _cancellationTokenSource;
 
         public event EventHandler<ProxyDataEventArgs> ClientDataSentToServer;
         public event EventHandler<ProxyDataEventArgs> ServerDataSentToClient;
@@ -32,9 +30,9 @@ namespace NRepeat
         {
             if (Running == false)
             {
-                cancellationTokenSource = new CancellationTokenSource();
+                _cancellationTokenSource = new CancellationTokenSource();
                 // Check if the listener is null, this should be after the proxy has been stopped
-                if (listener == null)
+                if (_listener == null)
                 {
                     await AcceptConnections();
                 }
@@ -46,22 +44,22 @@ namespace NRepeat
         /// <returns></returns>
         private async Task AcceptConnections()
         {
-            listener = new TcpListener(Server.Address, Server.Port);
+            _listener = new TcpListener(Server.Address, Server.Port);
             var bufferSize = Buffer; // Get the current buffer size on start
-            listener.Start();
+            _listener.Start();
             Running = true;
 
             // If there is an exception we want to output the message to the console for debugging
             try
             {
                 // While the Running bool is true, the listener is not null and there is no cancellation requested
-                while (Running && listener != null && !cancellationTokenSource.Token.IsCancellationRequested)
+                while (Running && _listener != null && !_cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    var client = await listener.AcceptTcpClientAsync().WithWaitCancellation(cancellationTokenSource.Token);
+                    var client = await _listener.AcceptTcpClientAsync().WithWaitCancellation(_cancellationTokenSource.Token);
                     if (client != null)
                     {
                         // Proxy the data from the client to the server until the end of stream filling the buffer.
-                        await ProxyClientConnection(client, bufferSize);
+                        ProxyClientConnection(client, bufferSize);
                     }
 
                 }
@@ -71,7 +69,7 @@ namespace NRepeat
                 Console.WriteLine(ex.Message);
             }
 
-            listener.Stop();
+            _listener.Stop();
         }
 
         /// <summary>
@@ -84,10 +82,10 @@ namespace NRepeat
         /// <param name="cancellationToken"></param>
         private void ProxyClientDataToServer(TcpClient client, NetworkStream serverStream, NetworkStream clientStream, int bufferSize, CancellationToken cancellationToken)
         {
-            byte[] message = new byte[bufferSize];
-            int clientBytes;
+            var message = new byte[bufferSize];
             while (!cancellationToken.IsCancellationRequested)
             {
+                int clientBytes;
                 try
                 {
                     clientBytes = clientStream.Read(message, 0, bufferSize);
@@ -115,7 +113,6 @@ namespace NRepeat
                 }
             }
 
-            message = null;
             client.Close();
         }
 
@@ -128,10 +125,10 @@ namespace NRepeat
         /// <param name="cancellationToken"></param>
         private void ProxyServerDataToClient(NetworkStream serverStream, NetworkStream clientStream, int bufferSize, CancellationToken cancellationToken)
         {
-            byte[] message = new byte[bufferSize];
-            int serverBytes;
+            var message = new byte[bufferSize];
             while (!cancellationToken.IsCancellationRequested)
             {
+                int serverBytes;
                 try
                 {
                     serverBytes = serverStream.Read(message, 0, bufferSize);
@@ -157,7 +154,6 @@ namespace NRepeat
                     ServerDataSentToClient(this, new ProxyDataEventArgs(serverBytes));
                 }
             }
-            message = null;
         }
         /// <summary>
         /// Process the client with a predetermined buffer size
@@ -165,16 +161,16 @@ namespace NRepeat
         /// <param name="client"></param>
         /// <param name="bufferSize"></param>
         /// <returns></returns>
-        private async Task ProxyClientConnection(TcpClient client, int bufferSize)
+        private void ProxyClientConnection(TcpClient client, int bufferSize)
         {
 
             // Handle this client
             // Send the server data to client and client data to server - swap essentially.
             var clientStream = client.GetStream();
-            TcpClient server = new TcpClient(Client.Address.ToString(), Client.Port);
+            var server = new TcpClient(Client.Address.ToString(), Client.Port);
             var serverStream = server.GetStream();
 
-            var cancellationToken = cancellationTokenSource.Token;
+            var cancellationToken = _cancellationTokenSource.Token;
 
             try
             {
@@ -186,7 +182,6 @@ namespace NRepeat
             {
                 Console.WriteLine(ex.Message);
             }
-
         }
 
         /// <summary>
@@ -194,20 +189,19 @@ namespace NRepeat
         /// </summary>
         public void Stop()
         {
-            if (listener != null && cancellationTokenSource != null)
+            if (_listener != null && _cancellationTokenSource != null)
             {
                 try
                 {
                     Running = false;
-                    listener.Stop();
-                    cancellationTokenSource.Cancel();
+//                    listener.Stop();
+                    _cancellationTokenSource.Cancel();
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
                 }
-
-                cancellationTokenSource = null;
+                _cancellationTokenSource = null;
 
             }
         }

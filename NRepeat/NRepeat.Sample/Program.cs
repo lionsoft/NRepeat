@@ -20,7 +20,10 @@ namespace NRepeat.Sample
             if (Debugger.IsAttached)
             {
                 definition.ServerAddress = IPAddress.Any;
-                definition.ServerPort = 4501;
+                definition.ServerPort = 8888;
+
+                definition.ClientAddress = IPAddress.Parse("213.180.193.3");
+                definition.ClientPort = 80;
             }
             else
             {
