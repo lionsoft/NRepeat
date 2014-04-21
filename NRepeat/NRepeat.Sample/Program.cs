@@ -22,8 +22,10 @@ namespace NRepeat.Sample
                 definition.ServerAddress = IPAddress.Any;
                 definition.ServerPort = 8888;
 
-                definition.ClientAddress = IPAddress.Parse("213.180.193.3");
-                definition.ClientPort = 80;
+                //definition.ClientAddress = IPAddress.Parse("213.180.193.3");
+                //definition.ClientPort = 80;
+                definition.ClientAddress = IPAddress.Parse("127.0.0.1");
+                definition.ClientPort = 9999;
             }
             else
             {
